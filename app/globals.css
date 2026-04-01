@@ -1,0 +1,25 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --floor-bg: #1a1a2e;
+    --floor-grid: #16213e;
+    --floor-cell: #0f3460;
+  }
+}
+
+@layer utilities {
+  /* Smooth rubber-band feel when dragging over cells */
+  .floor-cell-transition {
+    transition: background-color 0.1s ease, transform 0.1s ease,
+      box-shadow 0.1s ease;
+  }
+
+  /* Equipment card drag ghost */
+  .dragging-ghost {
+    opacity: 0.4;
+    transform: scale(0.95);
+  }
+}

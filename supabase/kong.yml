@@ -1,0 +1,160 @@
+## =============================================================================
+## Kong declarative config for Supabase self-hosted
+## Format version 1.1 (Kong 2.8.x)
+##
+## JWT keys below are the standard Supabase local-dev defaults.
+## CHANGE THESE before any internet-facing deployment.
+## Generate new keys: https://supabase.com/docs/guides/self-hosting/docker
+## =============================================================================
+_format_version: "3.0"
+
+###############################################################################
+# Consumers
+# Each Supabase JWT role maps to a Kong consumer.
+# The key is the raw JWT token — Kong matches it to validate the role.
+###############################################################################
+consumers:
+  - username: anon
+    keyauth_credentials:
+      - key: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRFA0NiK7kyqHDZOD4gHUMwziiS_oNa26xeVlNI_v78
+
+  - username: service_role
+    keyauth_credentials:
+      - key: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImV4cCI6MTk4MzgxMjk5Nn0.EGIM96RAZx35lJzdJsyH-qQwv8Hj04zWl196z2-SBc0
+
+###############################################################################
+# Services & Routes
+###############################################################################
+
+# ── Auth (GoTrue) ─────────────────────────────────────────────────────────────
+# Open endpoints (signup, login, OAuth callback) require no JWT.
+- name: auth-v1-open
+  url: http://auth:9999/
+  routes:
+    - name: auth-v1-open
+      strip_path: true
+      paths:
+        - /auth/v1/callback
+        - /auth/v1/verify
+        - /auth/v1/authorize
+        - /auth/v1/token
+        - /auth/v1/signup
+        - /auth/v1/recover
+        - /auth/v1/otp
+        - /auth/v1/magiclink
+        - /auth/v1/logout
+  plugins:
+    - name: cors
+
+# Authenticated auth endpoints (e.g. /auth/v1/user)
+- name: auth-v1
+  url: http://auth:9999/
+  routes:
+    - name: auth-v1
+      strip_path: true
+      paths:
+        - /auth/v1/
+  plugins:
+    - name: cors
+    - name: jwt
+      config:
+        secret_is_base64: false
+        claims_to_verify:
+          - exp
+        key_claim_name: role
+    - name: acl
+      config:
+        hide_groups_header: true
+        allow:
+          - anon
+          - service_role
+
+# ── PostgREST (REST API) ──────────────────────────────────────────────────────
+- name: rest-v1
+  url: http://rest:3000/
+  routes:
+    - name: rest-v1
+      strip_path: true
+      paths:
+        - /rest/v1/
+  plugins:
+    - name: cors
+    - name: jwt
+      config:
+        secret_is_base64: false
+        claims_to_verify:
+          - exp
+        key_claim_name: role
+    - name: acl
+      config:
+        hide_groups_header: true
+        allow:
+          - anon
+          - service_role
+
+# ── Realtime ──────────────────────────────────────────────────────────────────
+- name: realtime-v1
+  url: http://realtime:4000/socket/
+  routes:
+    - name: realtime-v1
+      strip_path: true
+      paths:
+        - /realtime/v1/
+  plugins:
+    - name: cors
+    - name: jwt
+      config:
+        secret_is_base64: false
+        claims_to_verify:
+          - exp
+        key_claim_name: role
+    - name: acl
+      config:
+        hide_groups_header: true
+        allow:
+          - anon
+          - service_role
+
+# ── Storage ───────────────────────────────────────────────────────────────────
+- name: storage-v1
+  url: http://storage:5000/
+  routes:
+    - name: storage-v1
+      strip_path: true
+      paths:
+        - /storage/v1/
+  plugins:
+    - name: cors
+    - name: jwt
+      config:
+        secret_is_base64: false
+        claims_to_verify:
+          - exp
+        key_claim_name: role
+    - name: acl
+      config:
+        hide_groups_header: true
+        allow:
+          - anon
+          - service_role
+
+# ── pg-meta (used by Studio) ──────────────────────────────────────────────────
+- name: meta
+  url: http://meta:8080/
+  routes:
+    - name: meta
+      strip_path: true
+      paths:
+        - /pg/
+  plugins:
+    - name: jwt
+      config:
+        secret_is_base64: false
+        claims_to_verify:
+          - exp
+        key_claim_name: role
+    - name: acl
+      config:
+        hide_groups_header: true
+        allow:
+          - service_role
